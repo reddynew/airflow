@@ -1,0 +1,78 @@
+Onboarding30DayMetricsDAG:
+ notify_email:
+    - "jvemula-ecw@cricut.com"
+ schedule_interval: "0 15 * * *"
+ start_date: "CURRENT DATE"
+ delta_load: false
+ refill_days: 45
+ days_per_batch: 45
+ tags:
+    - "Onboarding"
+    - "Discovery"
+    - "Analytics"
+
+ default_params:
+  prod:
+    stage_schema: "dw.public"
+    target_schema: "dw.analytics"
+    stage_table: "tbl_transform_onboarding_30_day_behavior_metrics_stage"
+    target_table: "onboarding_30_day_behavior_metrics_af"
+    database: "dw"
+  nonprod:
+    stage_schema: "np_dw.public"
+    target_schema: "np_dw.analytics"
+    stage_table: "tbl_transform_onboarding_30_day_behavior_metrics_stage"
+    target_table: "onboarding_30_day_behavior_metrics_af"
+    database: "np_dw"
+
+ steps:
+    CREATE_ONBOARDING_30DAY_BASE_TABLES:
+      conn_id: "redshift_default"
+      sql: "sql/onboarding_30_day_behavior_metrics/create_table.sql"
+      params:
+        delta_batch: "_45day_batch"
+        sessions_batch: "_full_sessions_batch"
+        union_batch: "_union_batch"
+    
+    TRANSFORM_ONBOARDING_30DAY_DELTA_TABLE:
+      conn_id: "redshift_default"
+      sql: "sql/onboarding_30_day_behavior_metrics/transform_onboarding_30day_delta_data.sql"
+      params:
+        delta_batch: "_45day_batch"
+        start_date: "2024-09-22"
+        end_date: "2024-11-05"
+
+    TRANSFORM_ONBOARDING_30DAY_UNION_TABLE:
+      conn_id: "redshift_default"
+      sql: "sql/onboarding_30_day_behavior_metrics/transform_onboarding_30day_union_batch_data.sql"
+      params:
+        union_batch: "_union_batch"
+        delta_batch: "_45day_batch"
+        start_date: "2024-09-22"
+        end_date: "2024-11-05"
+
+    TRANSFORM_ONBOARDING_30DAY_FULL_SESSIONS_TABLE:
+      conn_id: "redshift_default"
+      sql: "sql/onboarding_30_day_behavior_metrics/transform_onboarding_30day_full_sessions_batch_data.sql"
+      params:
+        origination_date: "2023-01-01"
+        sessions_batch: "_full_sessions_batch"
+        union_batch: "_union_batch"
+        delta_batch: "_45day_batch"
+        start_date: "2024-09-22"
+        end_date: "2024-11-05"
+
+    TRANSFORM_ONBOARDING_30DAY_MERGE_TABLE:
+      conn_id: "redshift_default"
+      sql: "sql/onboarding_30_day_behavior_metrics/transform_onboarding_30day_merge_data.sql"
+      params:
+        sessions_batch: "_full_sessions_batch"
+        union_batch: "_union_batch"
+        start_date: "2024-09-22"
+        end_date: "2024-11-05"
+
+    LOAD_ONBOARDING_30DAY_TABLE:
+      conn_id: "redshift_default"
+      sql: "sql/onboarding_30_day_behavior_metrics/load_target_table_data.sql"
+      start_date: "2024-09-22"
+      end_date: "2024-11-05"
